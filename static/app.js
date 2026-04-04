@@ -113,6 +113,36 @@ async function handleSubmit() {
 
 // ---------- Confirmation Panel ----------
 function renderMealCard(meal, index) {
+    // Build sources HTML
+    let sourcesHtml = '';
+    if (meal.sources && meal.sources.length > 0) {
+        const sourceItems = meal.sources.map(s => {
+            if (s.startsWith('http')) {
+                // Shorten URL for display
+                const domain = s.replace(/^https?:\/\//, '').split('/')[0];
+                return `<a href="${escapeHtml(s)}" target="_blank" rel="noopener">${escapeHtml(domain)}</a>`;
+            }
+            return escapeHtml(s);
+        }).join(', ');
+        sourcesHtml = `
+            <div class="rationale-sources">
+                <span class="label">Sources:</span> ${sourceItems}
+            </div>
+        `;
+    }
+
+    // Build rationale section
+    let rationaleHtml = '';
+    if (meal.calorie_breakdown || meal.rationale) {
+        rationaleHtml = `
+            <div class="rationale-section">
+                ${meal.calorie_breakdown ? `<div class="calorie-breakdown">${escapeHtml(meal.calorie_breakdown)}</div>` : ''}
+                ${meal.rationale ? `<div class="rationale-text">${escapeHtml(meal.rationale)}</div>` : ''}
+                ${sourcesHtml}
+            </div>
+        `;
+    }
+
     return `
         <div class="parsed-meal-card" style="padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #f3f4f6;">
             <div class="row">
@@ -131,6 +161,7 @@ function renderMealCard(meal, index) {
                 <span class="label">Confidence</span>
                 <span class="confidence-badge confidence-${meal.confidence}">${meal.confidence}</span>
             </div>
+            ${rationaleHtml}
         </div>
     `;
 }

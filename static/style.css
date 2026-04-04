@@ -227,6 +227,45 @@ header h1 {
 .confidence-medium { background: #fef3c7; color: #92400e; }
 .confidence-low { background: #fecaca; color: #991b1b; }
 
+/* Rationale Section */
+.rationale-section {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #f0fdf4;
+    border-radius: 8px;
+    border: 1px solid #bbf7d0;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.calorie-breakdown {
+    font-weight: 600;
+    color: #166534;
+    margin-bottom: 6px;
+}
+
+.rationale-text {
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.rationale-sources {
+    color: #6b7280;
+    font-size: 12px;
+    border-top: 1px solid #d1fae5;
+    padding-top: 6px;
+    margin-top: 4px;
+}
+
+.rationale-sources a {
+    color: #6366f1;
+    text-decoration: none;
+}
+
+.rationale-sources a:hover {
+    text-decoration: underline;
+}
+
 .clarification-input {
     width: 100%;
     padding: 10px 14px;

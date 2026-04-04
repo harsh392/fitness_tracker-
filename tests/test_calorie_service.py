@@ -39,6 +39,9 @@ class TestParseMeal:
                         "confidence": "high",
                         "needs_clarification": False,
                         "clarification_question": None,
+                        "calorie_breakdown": "2 large eggs (143 cal each = 286 cal) + 1 slice toast (64 cal) = 350 cal",
+                        "rationale": "Based on USDA FoodData Central values.",
+                        "sources": ["USDA FoodData Central"],
                     }]})
                 }
             }]
@@ -58,6 +61,10 @@ class TestParseMeal:
         assert result[0].calories == 350
         assert result[0].confidence == "high"
         assert result[0].needs_clarification is False
+        assert result[0].calorie_breakdown is not None
+        assert "286" in result[0].calorie_breakdown
+        assert result[0].rationale is not None
+        assert len(result[0].sources) > 0
 
     @pytest.mark.asyncio
     @patch("calorie_service.httpx.AsyncClient")
@@ -75,6 +82,9 @@ class TestParseMeal:
                             "confidence": "high",
                             "needs_clarification": False,
                             "clarification_question": None,
+                            "calorie_breakdown": "2 eggs (286 cal) + toast (64 cal)",
+                            "rationale": "USDA values.",
+                            "sources": ["USDA FoodData Central"],
                         },
                         {
                             "food_description": "1 chicken sandwich",
@@ -84,6 +94,9 @@ class TestParseMeal:
                             "confidence": "high",
                             "needs_clarification": False,
                             "clarification_question": None,
+                            "calorie_breakdown": "1 chicken sandwich (450 cal)",
+                            "rationale": "Standard grilled chicken sandwich.",
+                            "sources": ["Nutritionix"],
                         },
                     ]})
                 }
@@ -102,8 +115,10 @@ class TestParseMeal:
         assert len(result) == 2
         assert result[0].food_description == "2 eggs and toast"
         assert result[0].meal_time == "08:00"
+        assert result[0].rationale is not None
         assert result[1].food_description == "1 chicken sandwich"
         assert result[1].meal_time == "12:00"
+        assert result[1].sources == ["Nutritionix"]
 
     @pytest.mark.asyncio
     @patch("calorie_service.httpx.AsyncClient")

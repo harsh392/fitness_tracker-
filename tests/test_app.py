@@ -37,6 +37,9 @@ def mock_parsed_meal(**overrides):
         "confidence": "high",
         "needs_clarification": False,
         "clarification_question": None,
+        "calorie_breakdown": "2 large eggs (143 cal each = 286 cal) + 1 slice toast (64 cal) = 350 cal",
+        "rationale": "Based on USDA FoodData Central values for large scrambled eggs and standard white toast.",
+        "sources": ["USDA FoodData Central"],
         "raw_input": "I had 2 eggs and toast for breakfast",
     }
     defaults.update(overrides)

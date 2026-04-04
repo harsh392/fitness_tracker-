@@ -13,6 +13,9 @@ class ParsedMeal(BaseModel):
     confidence: str  # "high" | "medium" | "low"
     needs_clarification: bool
     clarification_question: str | None = None
+    calorie_breakdown: str | None = None  # e.g. "2 eggs (182 cal) + 1 slice toast (79 cal)"
+    rationale: str | None = None  # Explanation of how calories were calculated
+    sources: list[str] | None = None  # URLs or references used
     raw_input: str
 
 
