@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Meal Tracker</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Meal Tracker</h1>
+            <p class="subtitle">Log your meals with text or voice</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="input-row">
+                <input type="text" id="meal-input" placeholder='e.g. "I had 2 eggs and toast for breakfast"' autocomplete="off">
+                <button id="mic-btn" class="icon-btn" title="Speak your meal">
+                    <svg id="mic-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                </button>
+                <button id="submit-btn" class="primary-btn">Log Meal</button>
+            </div>
+            <div id="mic-status" class="mic-status hidden">Listening...</div>
+        </div>
+
+        <!-- Confirmation / Clarification Panel -->
+        <div id="confirm-panel" class="panel hidden">
+            <div id="confirm-content"></div>
+            <div id="confirm-actions" class="panel-actions"></div>
+        </div>
+
+        <!-- Error Panel -->
+        <div id="error-panel" class="panel error-panel hidden">
+            <p id="error-message"></p>
+        </div>
+
+        <!-- Daily Log Section -->
+        <div class="log-section">
+            <div class="log-header">
+                <h2>Daily Log</h2>
+                <input type="date" id="date-picker">
+            </div>
+            <div id="daily-summary" class="summary">
+                <span id="total-calories">0 cal</span>
+                <span id="meal-count">0 meals</span>
+            </div>
+            <div id="meals-list" class="meals-list">
+                <p class="empty-state">No meals logged yet today.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
