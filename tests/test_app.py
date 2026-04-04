@@ -46,25 +46,39 @@ def mock_parsed_meal(**overrides):
 class TestParseEndpoint:
     @patch("app.parse_meal", new_callable=AsyncMock)
     def test_parse_meal_success(self, mock_parse, client):
-        mock_parse.return_value = mock_parsed_meal()
+        mock_parse.return_value = [mock_parsed_meal()]
         res = client.post("/api/meals/parse", json={"text": "I had 2 eggs and toast for breakfast"})
         assert res.status_code == 200
         data = res.json()
-        assert data["food_description"] == "2 eggs and toast"
-        assert data["calories"] == 350
+        assert len(data["meals"]) == 1
+        assert data["meals"][0]["food_description"] == "2 eggs and toast"
+        assert data["meals"][0]["calories"] == 350
+
+    @patch("app.parse_meal", new_callable=AsyncMock)
+    def test_parse_multiple_meals(self, mock_parse, client):
+        mock_parse.return_value = [
+            mock_parsed_meal(food_description="2 eggs and toast", calories=350, meal_time="08:00"),
+            mock_parsed_meal(food_description="chicken sandwich", calories=450, meal_time="12:00"),
+        ]
+        res = client.post("/api/meals/parse", json={"text": "I had eggs for breakfast and a sandwich for lunch"})
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data["meals"]) == 2
+        assert data["meals"][0]["food_description"] == "2 eggs and toast"
+        assert data["meals"][1]["food_description"] == "chicken sandwich"
 
     @patch("app.parse_meal", new_callable=AsyncMock)
     def test_parse_meal_needs_clarification(self, mock_parse, client):
-        mock_parse.return_value = mock_parsed_meal(
+        mock_parse.return_value = [mock_parsed_meal(
             needs_clarification=True,
             clarification_question="What exactly did you eat?",
             confidence="low",
-        )
+        )]
         res = client.post("/api/meals/parse", json={"text": "I ate something"})
         assert res.status_code == 200
         data = res.json()
-        assert data["needs_clarification"] is True
-        assert "What exactly" in data["clarification_question"]
+        assert data["meals"][0]["needs_clarification"] is True
+        assert "What exactly" in data["meals"][0]["clarification_question"]
 
     def test_parse_empty_text(self, client):
         res = client.post("/api/meals/parse", json={"text": ""})

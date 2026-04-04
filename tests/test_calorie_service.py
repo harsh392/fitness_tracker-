@@ -31,7 +31,7 @@ class TestParseMeal:
         mock_response.json.return_value = {
             "choices": [{
                 "message": {
-                    "content": json.dumps({
+                    "content": json.dumps({"meals": [{
                         "food_description": "2 scrambled eggs and 1 slice of toast",
                         "calories": 350,
                         "meal_date": "2026-04-04",
@@ -39,7 +39,7 @@ class TestParseMeal:
                         "confidence": "high",
                         "needs_clarification": False,
                         "clarification_question": None,
-                    })
+                    }]})
                 }
             }]
         }
@@ -53,10 +53,57 @@ class TestParseMeal:
 
         result = await parse_meal("I had 2 eggs and toast for breakfast", "2026-04-04", "10:00")
 
-        assert result.food_description == "2 scrambled eggs and 1 slice of toast"
-        assert result.calories == 350
-        assert result.confidence == "high"
-        assert result.needs_clarification is False
+        assert len(result) == 1
+        assert result[0].food_description == "2 scrambled eggs and 1 slice of toast"
+        assert result[0].calories == 350
+        assert result[0].confidence == "high"
+        assert result[0].needs_clarification is False
+
+    @pytest.mark.asyncio
+    @patch("calorie_service.httpx.AsyncClient")
+    async def test_parse_multiple_meals(self, mock_client_cls):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "choices": [{
+                "message": {
+                    "content": json.dumps({"meals": [
+                        {
+                            "food_description": "2 eggs and toast",
+                            "calories": 350,
+                            "meal_date": "2026-04-04",
+                            "meal_time": "08:00",
+                            "confidence": "high",
+                            "needs_clarification": False,
+                            "clarification_question": None,
+                        },
+                        {
+                            "food_description": "1 chicken sandwich",
+                            "calories": 450,
+                            "meal_date": "2026-04-04",
+                            "meal_time": "12:00",
+                            "confidence": "high",
+                            "needs_clarification": False,
+                            "clarification_question": None,
+                        },
+                    ]})
+                }
+            }]
+        }
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        result = await parse_meal("I had eggs for breakfast and a chicken sandwich for lunch on 4th april", "2026-04-04", "10:00")
+
+        assert len(result) == 2
+        assert result[0].food_description == "2 eggs and toast"
+        assert result[0].meal_time == "08:00"
+        assert result[1].food_description == "1 chicken sandwich"
+        assert result[1].meal_time == "12:00"
 
     @pytest.mark.asyncio
     @patch("calorie_service.httpx.AsyncClient")
@@ -65,7 +112,7 @@ class TestParseMeal:
         mock_response.json.return_value = {
             "choices": [{
                 "message": {
-                    "content": json.dumps({
+                    "content": json.dumps({"meals": [{
                         "food_description": "unknown food",
                         "calories": 0,
                         "meal_date": "2026-04-04",
@@ -73,7 +120,7 @@ class TestParseMeal:
                         "confidence": "low",
                         "needs_clarification": True,
                         "clarification_question": "Could you describe what you ate in more detail?",
-                    })
+                    }]})
                 }
             }]
         }
@@ -87,9 +134,10 @@ class TestParseMeal:
 
         result = await parse_meal("I ate something", "2026-04-04", "10:00")
 
-        assert result.needs_clarification is True
-        assert result.clarification_question is not None
-        assert result.confidence == "low"
+        assert len(result) == 1
+        assert result[0].needs_clarification is True
+        assert result[0].clarification_question is not None
+        assert result[0].confidence == "low"
 
     @pytest.mark.asyncio
     async def test_missing_api_key(self):

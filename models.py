@@ -31,3 +31,8 @@ class UpdateMealRequest(BaseModel):
     meal_date: str
     meal_time: str
     raw_input: str = ""
+
+
+class ParseMealResponse(BaseModel):
+    meals: list[ParsedMeal]
+    raw_input: str

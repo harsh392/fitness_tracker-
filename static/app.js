@@ -13,7 +13,8 @@ const totalCalories = document.getElementById('total-calories');
 const mealCount = document.getElementById('meal-count');
 
 // State
-let currentParsed = null;
+let parsedMeals = [];       // Array of parsed meals from the API
+let conflictMealIndex = -1;  // Index of the meal currently showing a conflict
 let isProcessing = false;
 
 // Initialize
@@ -93,13 +94,15 @@ async function handleSubmit() {
             throw new Error(err.detail || 'Failed to parse meal');
         }
 
-        const parsed = await res.json();
-        currentParsed = parsed;
+        const data = await res.json();
+        parsedMeals = data.meals;
 
-        if (parsed.needs_clarification) {
-            showClarification(parsed);
+        // Check if any meal needs clarification
+        const needsClarification = parsedMeals.find(m => m.needs_clarification);
+        if (needsClarification) {
+            showClarification(needsClarification, data.raw_input);
         } else {
-            showConfirmation(parsed);
+            showConfirmation(parsedMeals);
         }
     } catch (err) {
         showError(err.message);
@@ -109,49 +112,62 @@ async function handleSubmit() {
 }
 
 // ---------- Confirmation Panel ----------
-function showConfirmation(parsed) {
-    confirmContent.innerHTML = `
-        <div class="parsed-info">
+function renderMealCard(meal, index) {
+    return `
+        <div class="parsed-meal-card" style="padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #f3f4f6;">
             <div class="row">
                 <span class="label">Food</span>
-                <span class="value">${escapeHtml(parsed.food_description)}</span>
+                <span class="value">${escapeHtml(meal.food_description)}</span>
             </div>
             <div class="row">
                 <span class="label">Calories</span>
-                <span class="value calories-value">${parsed.calories} cal</span>
+                <span class="value calories-value">${meal.calories} cal</span>
             </div>
             <div class="row">
-                <span class="label">Date</span>
-                <span class="value">${parsed.meal_date}</span>
-            </div>
-            <div class="row">
-                <span class="label">Time</span>
-                <span class="value">${parsed.meal_time}</span>
+                <span class="label">When</span>
+                <span class="value">${meal.meal_date} at ${meal.meal_time}</span>
             </div>
             <div class="row">
                 <span class="label">Confidence</span>
-                <span class="confidence-badge confidence-${parsed.confidence}">${parsed.confidence}</span>
+                <span class="confidence-badge confidence-${meal.confidence}">${meal.confidence}</span>
+            </div>
+        </div>
+    `;
+}
+
+function showConfirmation(meals) {
+    const count = meals.length;
+    const header = count > 1
+        ? `<p style="font-weight:600;margin-bottom:12px;">Found ${count} meals to log:</p>`
+        : '';
+
+    confirmContent.innerHTML = `
+        <div class="parsed-info">
+            ${header}
+            <div style="display:grid;gap:10px;">
+                ${meals.map((m, i) => renderMealCard(m, i)).join('')}
             </div>
         </div>
     `;
 
+    const btnLabel = count > 1 ? `Confirm All (${count})` : 'Confirm';
     confirmActions.innerHTML = `
-        <button class="btn-confirm" onclick="confirmMeal(false)">Confirm</button>
+        <button class="btn-confirm" onclick="confirmAllMeals(false)">${btnLabel}</button>
         <button class="btn-cancel" onclick="hideConfirm()">Cancel</button>
     `;
 
     confirmPanel.classList.remove('hidden');
 }
 
-function showClarification(parsed) {
+function showClarification(meal, rawInput) {
     confirmContent.innerHTML = `
         <div class="parsed-info">
             <div class="row">
                 <span class="label">Understood so far</span>
-                <span class="value">${escapeHtml(parsed.food_description)}</span>
+                <span class="value">${escapeHtml(meal.food_description)}</span>
             </div>
         </div>
-        <div class="clarification-question">${escapeHtml(parsed.clarification_question || 'Could you provide more details about what you ate?')}</div>
+        <div class="clarification-question">${escapeHtml(meal.clarification_question || 'Could you provide more details about what you ate?')}</div>
         <input type="text" class="clarification-input" id="clarification-input" placeholder="Add more details..." autofocus>
     `;
 
@@ -162,7 +178,6 @@ function showClarification(parsed) {
 
     confirmPanel.classList.remove('hidden');
 
-    // Allow Enter key in clarification input
     setTimeout(() => {
         const clarInput = document.getElementById('clarification-input');
         if (clarInput) {
@@ -174,8 +189,10 @@ function showClarification(parsed) {
     }, 50);
 }
 
-function showConflict(conflictData, pendingMeal) {
+function showConflict(conflictData, pendingMeal, mealIndex) {
     const existing = conflictData.existing_meal;
+    conflictMealIndex = mealIndex;
+
     confirmContent.innerHTML = `
         <div class="parsed-info">
             <p style="font-weight:600; margin-bottom:8px;">Duplicate detected!</p>
@@ -196,49 +213,127 @@ function showConflict(conflictData, pendingMeal) {
     `;
 
     confirmActions.innerHTML = `
-        <button class="btn-replace" onclick="confirmMeal(true)">Replace</button>
-        <button class="btn-ignore" onclick="hideConfirm()">Ignore</button>
+        <button class="btn-replace" onclick="resolveConflict(true)">Replace</button>
+        <button class="btn-ignore" onclick="resolveConflict(false)">Skip</button>
     `;
 
     confirmPanel.classList.remove('hidden');
 }
 
-// ---------- Confirm / Save Meal ----------
-async function confirmMeal(force) {
-    if (!currentParsed || isProcessing) return;
+// ---------- Confirm / Save All Meals ----------
+async function confirmAllMeals(force) {
+    if (!parsedMeals.length || isProcessing) return;
 
     setProcessing(true);
 
     try {
-        const res = await fetch('/api/meals', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                food_description: currentParsed.food_description,
-                calories: currentParsed.calories,
-                meal_date: currentParsed.meal_date,
-                meal_time: currentParsed.meal_time,
-                raw_input: currentParsed.raw_input,
-                force: force,
-            }),
-        });
+        for (let i = 0; i < parsedMeals.length; i++) {
+            const meal = parsedMeals[i];
+            const res = await fetch('/api/meals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    food_description: meal.food_description,
+                    calories: meal.calories,
+                    meal_date: meal.meal_date,
+                    meal_time: meal.meal_time,
+                    raw_input: meal.raw_input,
+                    force: force,
+                }),
+            });
 
-        const data = await res.json();
+            const data = await res.json();
 
-        if (res.status === 409) {
-            // Conflict — show conflict resolution UI
-            showConflict(data, currentParsed);
-            return;
+            if (res.status === 409) {
+                // Conflict — pause and show conflict resolution for this meal
+                setProcessing(false);
+                showConflict(data, meal, i);
+                return;
+            }
+
+            if (!res.ok) {
+                throw new Error(data.detail || `Failed to save meal: ${meal.food_description}`);
+            }
         }
 
-        if (!res.ok) {
-            throw new Error(data.detail || 'Failed to save meal');
-        }
-
-        // Success
+        // All saved successfully
         hideConfirm();
         mealInput.value = '';
-        currentParsed = null;
+        parsedMeals = [];
+        loadMeals(datePicker.value);
+    } catch (err) {
+        showError(err.message);
+    } finally {
+        setProcessing(false);
+    }
+}
+
+// ---------- Conflict Resolution ----------
+async function resolveConflict(replace) {
+    if (conflictMealIndex < 0 || isProcessing) return;
+
+    setProcessing(true);
+
+    try {
+        if (replace) {
+            // Re-send with force=true for the conflicting meal
+            const meal = parsedMeals[conflictMealIndex];
+            const res = await fetch('/api/meals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    food_description: meal.food_description,
+                    calories: meal.calories,
+                    meal_date: meal.meal_date,
+                    meal_time: meal.meal_time,
+                    raw_input: meal.raw_input,
+                    force: true,
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Failed to replace meal');
+            }
+        }
+
+        // Continue saving remaining meals after the conflict
+        const remaining = parsedMeals.slice(conflictMealIndex + 1);
+        conflictMealIndex = -1;
+
+        for (let i = 0; i < remaining.length; i++) {
+            const meal = remaining[i];
+            const res = await fetch('/api/meals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    food_description: meal.food_description,
+                    calories: meal.calories,
+                    meal_date: meal.meal_date,
+                    meal_time: meal.meal_time,
+                    raw_input: meal.raw_input,
+                    force: false,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (res.status === 409) {
+                const globalIndex = parsedMeals.indexOf(meal);
+                setProcessing(false);
+                showConflict(data, meal, globalIndex);
+                return;
+            }
+
+            if (!res.ok) {
+                throw new Error(data.detail || `Failed to save meal: ${meal.food_description}`);
+            }
+        }
+
+        // All done
+        hideConfirm();
+        mealInput.value = '';
+        parsedMeals = [];
         loadMeals(datePicker.value);
     } catch (err) {
         showError(err.message);
@@ -253,7 +348,7 @@ async function submitClarification() {
     const clarification = clarInput ? clarInput.value.trim() : '';
     if (!clarification) return;
 
-    const originalText = currentParsed ? currentParsed.raw_input : mealInput.value;
+    const originalText = parsedMeals.length > 0 ? parsedMeals[0].raw_input : mealInput.value;
     const combinedText = `${originalText} — clarification: ${clarification}`;
 
     mealInput.value = combinedText;

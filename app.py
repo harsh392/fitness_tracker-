@@ -41,8 +41,8 @@ async def parse_meal_endpoint(req: ParseMealRequest):
     current_time = now.strftime("%H:%M")
 
     try:
-        result = await parse_meal(req.text, current_date, current_time)
-        return result.model_dump()
+        meals = await parse_meal(req.text, current_date, current_time)
+        return {"meals": [m.model_dump() for m in meals], "raw_input": req.text}
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
