@@ -3,56 +3,137 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fitness Meal Tracker</title>
+    <title>Meal Tracker</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Meal Tracker</h1>
-            <p class="subtitle">Log your meals with text or voice</p>
+    <div class="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <h1 class="logo">meal<span class="logo-accent">tracker</span></h1>
+            </div>
+            <div class="header-right">
+                <input type="date" id="date-picker" class="date-picker">
+            </div>
         </header>
 
+        <!-- Dashboard Bento Grid -->
+        <div class="bento-grid">
+            <!-- Calorie Ring Card -->
+            <div class="glass-card card-calories">
+                <div class="ring-container">
+                    <svg class="progress-ring" viewBox="0 0 160 160">
+                        <circle class="ring-bg" cx="80" cy="80" r="70" />
+                        <circle class="ring-fill" id="calorie-ring" cx="80" cy="80" r="70" />
+                    </svg>
+                    <div class="ring-text">
+                        <span class="ring-number" id="calories-remaining">2000</span>
+                        <span class="ring-label">cal left</span>
+                    </div>
+                </div>
+                <div class="calorie-meta">
+                    <div class="meta-item">
+                        <span class="meta-value" id="calories-consumed">0</span>
+                        <span class="meta-label">eaten</span>
+                    </div>
+                    <div class="meta-divider"></div>
+                    <div class="meta-item">
+                        <span class="meta-value" id="calorie-goal-display">2000</span>
+                        <span class="meta-label">goal</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Macro Cards -->
+            <div class="glass-card card-macro card-protein">
+                <span class="macro-icon">P</span>
+                <span class="macro-label">Protein</span>
+                <span class="macro-value" id="macro-protein">—</span>
+            </div>
+            <div class="glass-card card-macro card-carbs">
+                <span class="macro-icon">C</span>
+                <span class="macro-label">Carbs</span>
+                <span class="macro-value" id="macro-carbs">—</span>
+            </div>
+            <div class="glass-card card-macro card-fat">
+                <span class="macro-icon">F</span>
+                <span class="macro-label">Fat</span>
+                <span class="macro-value" id="macro-fat">—</span>
+            </div>
+
+            <!-- Meal Count Card -->
+            <div class="glass-card card-meals-count">
+                <span class="meals-count-number" id="meal-count-num">0</span>
+                <span class="meals-count-label">meals today</span>
+            </div>
+        </div>
+
         <!-- Input Section -->
-        <div class="input-section">
+        <div class="input-section glass-card">
             <div class="input-row">
-                <input type="text" id="meal-input" placeholder='e.g. "I had 2 eggs and toast for breakfast"' autocomplete="off">
-                <button id="mic-btn" class="icon-btn" title="Speak your meal">
-                    <svg id="mic-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                <input type="text" id="meal-input" placeholder='What did you eat? e.g. "2 eggs and toast for breakfast"' autocomplete="off">
+                <button id="mic-btn" class="btn-icon" title="Speak your meal">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                         <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                         <line x1="12" y1="19" x2="12" y2="23"/>
                         <line x1="8" y1="23" x2="16" y2="23"/>
                     </svg>
                 </button>
-                <button id="submit-btn" class="primary-btn">Log Meal</button>
+                <button id="submit-btn" class="btn-primary">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="22" y1="2" x2="11" y2="13"/>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                </button>
             </div>
             <div id="mic-status" class="mic-status hidden">Listening...</div>
         </div>
 
         <!-- Confirmation / Clarification Panel -->
-        <div id="confirm-panel" class="panel hidden">
+        <div id="confirm-panel" class="glass-card confirm-panel hidden">
             <div id="confirm-content"></div>
-            <div id="confirm-actions" class="panel-actions"></div>
+            <div id="confirm-actions" class="confirm-actions"></div>
         </div>
 
         <!-- Error Panel -->
-        <div id="error-panel" class="panel error-panel hidden">
+        <div id="error-panel" class="error-panel hidden">
             <p id="error-message"></p>
         </div>
 
-        <!-- Daily Log Section -->
-        <div class="log-section">
-            <div class="log-header">
-                <h2>Daily Log</h2>
-                <input type="date" id="date-picker">
+        <!-- Meals Timeline -->
+        <div class="meals-section">
+            <h2 class="section-title">Today's Meals</h2>
+            <div id="meals-list" class="meals-timeline">
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+                            <line x1="6" y1="1" x2="6" y2="4"/>
+                            <line x1="10" y1="1" x2="10" y2="4"/>
+                            <line x1="14" y1="1" x2="14" y2="4"/>
+                        </svg>
+                    </div>
+                    <p>No meals logged yet</p>
+                    <p class="empty-hint">Type or speak what you ate above</p>
+                </div>
             </div>
-            <div id="daily-summary" class="summary">
-                <span id="total-calories">0 cal</span>
-                <span id="meal-count">0 meals</span>
-            </div>
-            <div id="meals-list" class="meals-list">
-                <p class="empty-state">No meals logged yet today.</p>
+        </div>
+
+        <!-- Goal Settings Modal -->
+        <div id="goal-modal" class="modal-overlay hidden">
+            <div class="glass-card modal-content">
+                <h3>Set Daily Calorie Goal</h3>
+                <input type="number" id="goal-input" class="goal-input" placeholder="2000" min="500" max="10000">
+                <div class="modal-actions">
+                    <button class="btn-confirm" onclick="saveGoal()">Save</button>
+                    <button class="btn-cancel" onclick="closeGoalModal()">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
