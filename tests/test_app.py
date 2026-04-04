@@ -151,7 +151,11 @@ class TestGetMeals:
         })
         res = client.get("/api/meals?date=2026-04-04")
         assert res.status_code == 200
-        assert len(res.json()["meals"]) == 1
+        data = res.json()
+        assert len(data["meals"]) == 1
+        # Combined endpoint now includes summary
+        assert data["total_calories"] == 200
+        assert data["meal_count"] == 1
 
     def test_get_summary(self, client):
         client.post("/api/meals", json={

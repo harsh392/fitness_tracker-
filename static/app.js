@@ -436,49 +436,20 @@ async function submitClarification() {
 // ---------- Load Meals ----------
 async function loadMeals(date) {
     try {
-        const [mealsRes, summaryRes] = await Promise.all([
-            fetch(`/api/meals?date=${date}`),
-            fetch(`/api/meals/summary?date=${date}`),
-        ]);
+        const res = await fetch(`/api/meals?date=${date}`);
+        const data = await res.json();
 
-        const mealsData = await mealsRes.json();
-        const summaryData = await summaryRes.json();
+        updateRing(data.total_calories);
+        mealCountNum.textContent = data.meal_count;
 
-        // Update ring and stats
-        updateRing(summaryData.total_calories);
-        mealCountNum.textContent = summaryData.meal_count;
-
-        if (mealsData.meals.length === 0) {
-            mealsList.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
-                            <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
-                            <line x1="6" y1="1" x2="6" y2="4"/>
-                            <line x1="10" y1="1" x2="10" y2="4"/>
-                            <line x1="14" y1="1" x2="14" y2="4"/>
-                        </svg>
-                    </div>
-                    <p>No meals logged yet</p>
-                    <p class="empty-hint">Type or speak what you ate above</p>
-                </div>
-            `;
+        if (!data.meals.length) {
+            mealsList.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div><p>No meals logged yet</p><p class="empty-hint">Type or speak what you ate above</p></div>';
             return;
         }
 
-        mealsList.innerHTML = mealsData.meals.map(meal => `
-            <div class="meal-card">
-                <div class="meal-time-badge">${meal.meal_time}</div>
-                <div class="meal-info">
-                    <div class="meal-desc">${escapeHtml(meal.food_description)}</div>
-                </div>
-                <div class="meal-cal">${meal.calories}</div>
-                <button class="delete-btn" onclick="deleteMeal(${meal.id})" title="Delete">&times;</button>
-            </div>
-        `).join('');
+        mealsList.innerHTML = data.meals.map(m => `<div class="meal-card"><div class="meal-time-badge">${m.meal_time}</div><div class="meal-info"><div class="meal-desc">${escapeHtml(m.food_description)}</div></div><div class="meal-cal">${m.calories}</div><button class="delete-btn" onclick="deleteMeal(${m.id})" title="Delete">&times;</button></div>`).join('');
     } catch (err) {
-        console.error('Failed to load meals:', err);
+        console.error('Load failed:', err);
     }
 }
 

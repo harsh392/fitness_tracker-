@@ -92,7 +92,8 @@ async def get_meals(date: str = None):
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
     meals = database.get_meals_by_date(date)
-    return {"date": date, "meals": meals}
+    summary = database.get_daily_summary(date)
+    return {"date": date, "meals": meals, **summary}
 
 
 @app.get("/api/meals/summary")
