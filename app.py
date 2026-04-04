@@ -64,8 +64,9 @@ async def create_meal(req: CreateMealRequest):
             },
         )
 
+    nutrition = req.nutrition.model_dump() if req.nutrition else None
+
     if conflict and req.force:
-        # Replace existing meal
         updated = database.update_meal(
             conflict["id"],
             req.food_description,
@@ -73,6 +74,7 @@ async def create_meal(req: CreateMealRequest):
             req.meal_date,
             req.meal_time,
             req.raw_input,
+            nutrition,
         )
         return {"message": "Meal replaced successfully", "meal": updated}
 
@@ -83,6 +85,7 @@ async def create_meal(req: CreateMealRequest):
         req.meal_date,
         req.meal_time,
         req.raw_input,
+        nutrition,
     )
     return JSONResponse(status_code=201, content={"message": "Meal logged successfully", "meal": meal})
 
@@ -118,6 +121,7 @@ async def update_meal_endpoint(meal_id: int, req: UpdateMealRequest):
     if not existing:
         raise HTTPException(status_code=404, detail="Meal not found")
 
+    nutrition = req.nutrition.model_dump() if req.nutrition else None
     updated = database.update_meal(
         meal_id,
         req.food_description,
@@ -125,5 +129,6 @@ async def update_meal_endpoint(meal_id: int, req: UpdateMealRequest):
         req.meal_date,
         req.meal_time,
         req.raw_input,
+        nutrition,
     )
     return {"message": "Meal updated successfully", "meal": updated}

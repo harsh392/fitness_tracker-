@@ -69,6 +69,24 @@
             </div>
         </div>
 
+        <!-- Micronutrients Panel (collapsible) -->
+        <div class="glass-card micros-panel" id="micros-panel">
+            <button class="micros-toggle" onclick="toggleMicros()">
+                <span>Micronutrients</span>
+                <span class="micros-chevron" id="micros-chevron">&#9662;</span>
+            </button>
+            <div class="micros-grid hidden" id="micros-grid">
+                <div class="micro-item"><span class="micro-label">Fiber</span><span class="micro-value" id="micro-fiber">—</span><span class="micro-unit">g</span></div>
+                <div class="micro-item"><span class="micro-label">Sodium</span><span class="micro-value" id="micro-sodium">—</span><span class="micro-unit">mg</span></div>
+                <div class="micro-item"><span class="micro-label">Iron</span><span class="micro-value" id="micro-iron">—</span><span class="micro-unit">mg</span></div>
+                <div class="micro-item"><span class="micro-label">Calcium</span><span class="micro-value" id="micro-calcium">—</span><span class="micro-unit">mg</span></div>
+                <div class="micro-item"><span class="micro-label">Vitamin A</span><span class="micro-value" id="micro-vitamin-a">—</span><span class="micro-unit">mcg</span></div>
+                <div class="micro-item"><span class="micro-label">Vitamin C</span><span class="micro-value" id="micro-vitamin-c">—</span><span class="micro-unit">mg</span></div>
+                <div class="micro-item"><span class="micro-label">Vitamin D</span><span class="micro-value" id="micro-vitamin-d">—</span><span class="micro-unit">mcg</span></div>
+                <div class="micro-item"><span class="micro-label">Potassium</span><span class="micro-value" id="micro-potassium">—</span><span class="micro-unit">mg</span></div>
+            </div>
+        </div>
+
         <!-- Input Section -->
         <div class="input-section glass-card">
             <div class="input-row">

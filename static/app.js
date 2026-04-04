@@ -49,6 +49,28 @@ datePicker.addEventListener('change', () => {
     loadMeals(datePicker.value);
 });
 
+// ---------- Macros & Micros ----------
+function updateNutrition(nutrition) {
+    if (!nutrition) return;
+    // Macros
+    document.getElementById('macro-protein').textContent = nutrition.protein ? `${nutrition.protein}g` : '—';
+    document.getElementById('macro-carbs').textContent = nutrition.carbs ? `${nutrition.carbs}g` : '—';
+    document.getElementById('macro-fat').textContent = nutrition.fat ? `${nutrition.fat}g` : '—';
+    // Micros
+    const micros = {fiber:'g',sodium:'mg',iron:'mg',calcium:'mg',vitamin_a:'mcg',vitamin_c:'mg',vitamin_d:'mcg',potassium:'mg'};
+    for (const [key, unit] of Object.entries(micros)) {
+        const el = document.getElementById('micro-' + key.replace('_', '-'));
+        if (el) el.textContent = nutrition[key] ? nutrition[key] : '—';
+    }
+}
+
+function toggleMicros() {
+    const grid = document.getElementById('micros-grid');
+    const chevron = document.getElementById('micros-chevron');
+    grid.classList.toggle('hidden');
+    chevron.classList.toggle('open');
+}
+
 // ---------- Calorie Ring ----------
 function updateRing(consumed) {
     const remaining = Math.max(0, calorieGoal - consumed);
@@ -330,6 +352,7 @@ async function confirmAllMeals(force) {
                     meal_date: meal.meal_date,
                     meal_time: meal.meal_time,
                     raw_input: meal.raw_input,
+                    nutrition: meal.nutrition || null,
                     force: force,
                 }),
             });
@@ -373,6 +396,7 @@ async function resolveConflict(replace) {
                     meal_date: meal.meal_date,
                     meal_time: meal.meal_time,
                     raw_input: meal.raw_input,
+                    nutrition: meal.nutrition || null,
                     force: true,
                 }),
             });
@@ -396,6 +420,7 @@ async function resolveConflict(replace) {
                     meal_date: meal.meal_date,
                     meal_time: meal.meal_time,
                     raw_input: meal.raw_input,
+                    nutrition: meal.nutrition || null,
                     force: false,
                 }),
             });
@@ -441,6 +466,7 @@ async function loadMeals(date) {
 
         updateRing(data.total_calories);
         mealCountNum.textContent = data.meal_count;
+        updateNutrition(data.nutrition);
 
         if (!data.meals.length) {
             mealsList.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div><p>No meals logged yet</p><p class="empty-hint">Type or speak what you ate above</p></div>';

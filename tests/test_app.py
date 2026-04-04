@@ -40,6 +40,7 @@ def mock_parsed_meal(**overrides):
         "calorie_breakdown": "2 large eggs (143 cal each = 286 cal) + 1 slice toast (64 cal) = 350 cal",
         "rationale": "Based on USDA FoodData Central values for large scrambled eggs and standard white toast.",
         "sources": ["USDA FoodData Central"],
+        "nutrition": {"protein": 21.0, "carbs": 14.0, "fat": 19.0, "fiber": 1.0, "sodium": 300.0, "iron": 2.5, "calcium": 60.0, "vitamin_a": 160.0, "vitamin_c": 0.0, "vitamin_d": 2.0, "potassium": 200.0},
         "raw_input": "I had 2 eggs and toast for breakfast",
     }
     defaults.update(overrides)
@@ -153,9 +154,9 @@ class TestGetMeals:
         assert res.status_code == 200
         data = res.json()
         assert len(data["meals"]) == 1
-        # Combined endpoint now includes summary
         assert data["total_calories"] == 200
         assert data["meal_count"] == 1
+        assert "nutrition" in data
 
     def test_get_summary(self, client):
         client.post("/api/meals", json={

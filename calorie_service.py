@@ -26,6 +26,19 @@ Each meal object must have:
 8. calorie_breakdown: A clear per-item breakdown showing how you calculated the total. Example: "2 large eggs (143 cal each = 286 cal) + 1 slice whole wheat toast (79 cal) = 365 cal"
 9. rationale: A 1-3 sentence explanation of your estimation method. Mention the data source (e.g., "Based on USDA FoodData Central values for large scrambled eggs and standard white toast"). Be specific about assumptions (serving size, preparation method).
 10. sources: An array of URLs or reference names where you found the calorie data. Example: ["USDA FoodData Central", "https://nutritionix.com/food/eggs"]. If using general knowledge, use ["General nutritional knowledge - estimated values"].
+11. nutrition: An object with macronutrient and micronutrient estimates:
+    - protein: grams of protein (float)
+    - carbs: grams of carbohydrates (float)
+    - fat: grams of fat (float)
+    - fiber: grams of dietary fiber (float)
+    - sodium: milligrams of sodium (float)
+    - iron: milligrams of iron (float)
+    - calcium: milligrams of calcium (float)
+    - vitamin_a: micrograms of vitamin A (float)
+    - vitamin_c: milligrams of vitamin C (float)
+    - vitamin_d: micrograms of vitamin D (float)
+    - potassium: milligrams of potassium (float)
+    Use your best estimate based on searched data. All values should be numbers, not strings.
 
 Rules:
 - If no time is mentioned, use the current time.
@@ -37,7 +50,7 @@ Rules:
 - Only set needs_clarification to true when the input is genuinely too vague (e.g., "I ate something", "had a big meal", "ate food").
 - Be generous with interpretation. "Had a burger" is fine — assume a standard burger. Only ask for clarification when you truly cannot determine what was eaten.
 - Even if the user describes only one meal, still wrap it in the "meals" array.
-- ALWAYS provide calorie_breakdown, rationale, and sources — these are mandatory.
+- ALWAYS provide calorie_breakdown, rationale, sources, and nutrition — these are mandatory.
 
 Respond with ONLY valid JSON in this format: {{"meals": [...]}}
 No markdown, no code fences, no explanation. Just the JSON object."""
@@ -116,6 +129,7 @@ async def parse_meal(text: str, current_date: str, current_time: str) -> list[Pa
                 calorie_breakdown=m.get("calorie_breakdown"),
                 rationale=m.get("rationale"),
                 sources=m.get("sources", []),
+                nutrition=m.get("nutrition"),
                 raw_input=text,
             )
             for m in meal_list
