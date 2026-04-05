@@ -11,8 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 import database
-from models import ParseMealRequest, CreateMealRequest, UpdateMealRequest
+from models import ParseMealRequest, CreateMealRequest, UpdateMealRequest, CreateChatRequest, ChatMessageRequest
 from calorie_service import parse_meal
+from chat_service import chat_with_guru
 
 
 @asynccontextmanager
@@ -132,3 +133,50 @@ async def update_meal_endpoint(meal_id: int, req: UpdateMealRequest):
         nutrition,
     )
     return {"message": "Meal updated successfully", "meal": updated}
+
+
+# ===== Chat endpoints =====
+
+@app.post("/api/chats")
+async def create_chat_endpoint(req: CreateChatRequest):
+    chat = database.create_chat(req.title)
+    return JSONResponse(status_code=201, content=chat)
+
+
+@app.get("/api/chats")
+async def list_chats_endpoint():
+    return {"chats": database.list_chats()}
+
+
+@app.get("/api/chats/{chat_id}/messages")
+async def get_chat_messages_endpoint(chat_id: int):
+    chat = database.get_chat(chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    messages = database.get_chat_messages(chat_id)
+    return {"chat": chat, "messages": messages}
+
+
+@app.post("/api/chats/{chat_id}/messages")
+async def send_chat_message_endpoint(chat_id: int, req: ChatMessageRequest):
+    chat = database.get_chat(chat_id)
+    if not chat:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    if not req.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    try:
+        reply = await chat_with_guru(chat_id, req.message)
+        updated_chat = database.get_chat(chat_id)
+        return {"reply": reply, "chat": updated_chat}
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
+@app.delete("/api/chats/{chat_id}")
+async def delete_chat_endpoint(chat_id: int):
+    success = database.delete_chat(chat_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Chat not found")
+    return {"message": "Chat deleted successfully"}

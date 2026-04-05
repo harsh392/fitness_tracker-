@@ -56,3 +56,11 @@ class UpdateMealRequest(BaseModel):
 class ParseMealResponse(BaseModel):
     meals: list[ParsedMeal]
     raw_input: str
+
+
+class CreateChatRequest(BaseModel):
+    title: str = "New Chat"
+
+
+class ChatMessageRequest(BaseModel):
+    message: str

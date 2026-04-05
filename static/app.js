@@ -164,6 +164,46 @@ if (SpeechRecognition) {
     micBtn.style.display = 'none';
 }
 
+// ---------- Progress Bar ----------
+let progressTimer = null;
+const PROGRESS_STAGES = [
+    { pct: 8, msg: 'Sending to AI...', at: 0 },
+    { pct: 25, msg: 'Searching nutrition data...', at: 2000 },
+    { pct: 50, msg: 'Analyzing your meal...', at: 8000 },
+    { pct: 72, msg: 'Calculating calories...', at: 15000 },
+    { pct: 88, msg: 'Almost there...', at: 22000 },
+    { pct: 95, msg: 'Finalizing...', at: 30000 },
+];
+
+function startProgress() {
+    const panel = document.getElementById('parse-progress');
+    const bar = document.getElementById('progress-bar-fill');
+    const status = document.getElementById('progress-status');
+    panel.classList.remove('hidden');
+    bar.style.width = '0%';
+    status.textContent = 'Thinking...';
+    const startTime = Date.now();
+    const tick = () => {
+        const elapsed = Date.now() - startTime;
+        let currentStage = PROGRESS_STAGES[0];
+        for (const stage of PROGRESS_STAGES) {
+            if (elapsed >= stage.at) currentStage = stage;
+        }
+        bar.style.width = currentStage.pct + '%';
+        status.textContent = currentStage.msg;
+    };
+    tick();
+    progressTimer = setInterval(tick, 500);
+}
+
+function finishProgress() {
+    const panel = document.getElementById('parse-progress');
+    const bar = document.getElementById('progress-bar-fill');
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    bar.style.width = '100%';
+    setTimeout(() => panel.classList.add('hidden'), 300);
+}
+
 // ---------- Submit & Parse ----------
 async function handleSubmit() {
     const text = mealInput.value.trim();
@@ -172,6 +212,7 @@ async function handleSubmit() {
     setProcessing(true);
     hideError();
     hideConfirm();
+    startProgress();
 
     try {
         const res = await fetch('/api/meals/parse', {
@@ -198,6 +239,7 @@ async function handleSubmit() {
         showError(err.message);
     } finally {
         setProcessing(false);
+        finishProgress();
     }
 }
 
@@ -524,3 +566,204 @@ function escapeHtml(str) {
     div.textContent = str;
     return div.innerHTML;
 }
+
+// ===========================================
+// Chat — Fitness Guru "Coach"
+// ===========================================
+let currentChatId = null;
+let chatSending = false;
+
+async function openChat() {
+    document.getElementById('chat-drawer').classList.remove('hidden');
+    await loadChatList();
+    const chats = document.querySelectorAll('.chat-list-item');
+    if (!currentChatId) {
+        // If any chats exist, open most recent. Otherwise show empty state.
+        if (chats.length > 0) {
+            const firstId = chats[0].dataset.id;
+            await loadChat(parseInt(firstId));
+        } else {
+            renderEmptyChat();
+        }
+    }
+    document.getElementById('chat-input').focus();
+}
+
+function closeChat() {
+    document.getElementById('chat-drawer').classList.add('hidden');
+}
+
+async function loadChatList() {
+    try {
+        const res = await fetch('/api/chats');
+        const data = await res.json();
+        const list = document.getElementById('chat-list');
+        if (!data.chats.length) {
+            list.innerHTML = '<div class="chat-list-empty">No chats yet. Start a new one!</div>';
+            return;
+        }
+        list.innerHTML = data.chats.map(c => `
+            <div class="chat-list-item ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}" onclick="loadChat(${c.id})">
+                <span class="chat-list-item-title">${escapeHtml(c.title)}</span>
+                <button class="chat-list-delete" onclick="event.stopPropagation();deleteChat(${c.id})" title="Delete">&times;</button>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Failed to load chats:', err);
+    }
+}
+
+async function createNewChat() {
+    try {
+        const res = await fetch('/api/chats', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'New Chat' }),
+        });
+        const chat = await res.json();
+        currentChatId = chat.id;
+        await loadChatList();
+        renderEmptyChat(chat.title);
+        document.getElementById('chat-input').focus();
+    } catch (err) {
+        console.error('Failed to create chat:', err);
+    }
+}
+
+async function loadChat(chatId) {
+    currentChatId = chatId;
+    try {
+        const res = await fetch(`/api/chats/${chatId}/messages`);
+        const data = await res.json();
+        document.getElementById('chat-title').textContent = data.chat.title;
+        renderChatMessages(data.messages);
+        await loadChatList();
+    } catch (err) {
+        console.error('Failed to load chat:', err);
+    }
+}
+
+async function deleteChat(chatId) {
+    try {
+        await fetch(`/api/chats/${chatId}`, { method: 'DELETE' });
+        if (currentChatId === chatId) {
+            currentChatId = null;
+            renderEmptyChat();
+            document.getElementById('chat-title').textContent = 'Coach';
+        }
+        await loadChatList();
+    } catch (err) {
+        console.error('Failed to delete chat:', err);
+    }
+}
+
+function renderEmptyChat(title) {
+    document.getElementById('chat-title').textContent = title || 'Coach';
+    document.getElementById('chat-messages').innerHTML = `
+        <div class="chat-empty">
+            <p class="chat-empty-title">Hi, I'm Coach.</p>
+            <p class="chat-empty-hint">Ask me about your meals, calories, macros, or fitness goals.</p>
+        </div>
+    `;
+}
+
+function renderChatMessages(messages) {
+    const container = document.getElementById('chat-messages');
+    if (!messages.length) {
+        renderEmptyChat(document.getElementById('chat-title').textContent);
+        return;
+    }
+    container.innerHTML = messages.map(m =>
+        `<div class="chat-msg ${m.role}">${escapeHtml(m.content)}</div>`
+    ).join('');
+    container.scrollTop = container.scrollHeight;
+}
+
+function appendChatMessage(role, content) {
+    const container = document.getElementById('chat-messages');
+    const empty = container.querySelector('.chat-empty');
+    if (empty) container.innerHTML = '';
+    const div = document.createElement('div');
+    div.className = `chat-msg ${role}`;
+    div.textContent = content;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+}
+
+function appendTyping() {
+    const container = document.getElementById('chat-messages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg typing';
+    div.id = 'typing-indicator';
+    div.textContent = 'Coach is thinking';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message || chatSending) return;
+
+    // Auto-create chat if none
+    if (!currentChatId) {
+        try {
+            const res = await fetch('/api/chats', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'New Chat' }),
+            });
+            const chat = await res.json();
+            currentChatId = chat.id;
+        } catch (err) {
+            console.error('Failed to create chat:', err);
+            return;
+        }
+    }
+
+    chatSending = true;
+    input.value = '';
+    appendChatMessage('user', message);
+    appendTyping();
+
+    try {
+        const res = await fetch(`/api/chats/${currentChatId}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message }),
+        });
+        removeTyping();
+        if (!res.ok) {
+            const err = await res.json();
+            appendChatMessage('assistant', `Error: ${err.detail || 'Failed to send'}`);
+            return;
+        }
+        const data = await res.json();
+        appendChatMessage('assistant', data.reply);
+        document.getElementById('chat-title').textContent = data.chat.title;
+        await loadChatList();
+    } catch (err) {
+        removeTyping();
+        appendChatMessage('assistant', `Error: ${err.message}`);
+    } finally {
+        chatSending = false;
+    }
+}
+
+document.getElementById('chat-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+    }
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !document.getElementById('chat-drawer').classList.contains('hidden')) {
+        closeChat();
+    }
+});

@@ -52,6 +52,27 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_meals_date_time
             ON meals(meal_date, meal_time)
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS chats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL DEFAULT 'New Chat',
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY (chat_id) REFERENCES chats(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id
+            ON chat_messages(chat_id)
+        """)
 
 
 def _row_to_dict(row):
@@ -155,3 +176,66 @@ def get_meal_by_id(meal_id: int) -> dict | None:
     with get_db() as conn:
         row = conn.execute("SELECT * FROM meals WHERE id = ?", (meal_id,)).fetchone()
         return _row_to_dict(row)
+
+
+# ---------- Chat functions ----------
+
+def create_chat(title: str = "New Chat") -> dict:
+    with get_db() as conn:
+        cursor = conn.execute("INSERT INTO chats (title) VALUES (?)", (title,))
+        row = conn.execute("SELECT * FROM chats WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        return _row_to_dict(row)
+
+
+def list_chats() -> list[dict]:
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM chats ORDER BY created_at DESC").fetchall()
+        return [_row_to_dict(r) for r in rows]
+
+
+def get_chat(chat_id: int) -> dict | None:
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM chats WHERE id = ?", (chat_id,)).fetchone()
+        return _row_to_dict(row)
+
+
+def delete_chat(chat_id: int) -> bool:
+    with get_db() as conn:
+        cursor = conn.execute("DELETE FROM chats WHERE id = ?", (chat_id,))
+        return cursor.rowcount > 0
+
+
+def update_chat_title(chat_id: int, title: str) -> dict | None:
+    with get_db() as conn:
+        conn.execute("UPDATE chats SET title = ? WHERE id = ?", (title, chat_id))
+        row = conn.execute("SELECT * FROM chats WHERE id = ?", (chat_id,)).fetchone()
+        return _row_to_dict(row)
+
+
+def add_chat_message(chat_id: int, role: str, content: str) -> dict:
+    with get_db() as conn:
+        cursor = conn.execute(
+            "INSERT INTO chat_messages (chat_id, role, content) VALUES (?, ?, ?)",
+            (chat_id, role, content),
+        )
+        row = conn.execute("SELECT * FROM chat_messages WHERE id = ?", (cursor.lastrowid,)).fetchone()
+        return _row_to_dict(row)
+
+
+def get_chat_messages(chat_id: int) -> list[dict]:
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY created_at ASC",
+            (chat_id,),
+        ).fetchall()
+        return [_row_to_dict(r) for r in rows]
+
+
+def get_meals_date_range(start_date: str, end_date: str) -> list[dict]:
+    """Get all meals between two dates (inclusive) for chat context."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM meals WHERE meal_date >= ? AND meal_date <= ? ORDER BY meal_date ASC, meal_time ASC",
+            (start_date, end_date),
+        ).fetchall()
+        return [_row_to_dict(r) for r in rows]
